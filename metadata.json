@@ -1,0 +1,5 @@
+{
+  "name": "Marketing Equipment Hub",
+  "description": "A web application to log and manage the borrowing of marketing equipment. It features separate views for logging requests and viewing available equipment, with admin controls for managing entries and equipment inventory.",
+  "requestFramePermissions": []
+}
