@@ -1,20 +1,24 @@
-
 import React, { useState, useEffect } from 'react';
-import { Tab, LogEntry, EquipmentItem } from './types';
+import { Tab, LogEntry, EquipmentItem, AdminUser, CollateralItem } from './types';
 import LogbookView from './components/LogbookView';
 import EquipmentView from './components/EquipmentView';
+import DashboardView from './components/DashboardView';
 import LoginModal from './components/LoginModal';
 import Tabs from './components/Tabs';
+import AdminSettingsView from './components/AdminSettingsView';
+import CollateralsView from './components/CollateralsView';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from './index';
 
 const App: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<Tab>(Tab.LOGBOOK);
+    const [activeTab, setActiveTab] = useState<Tab>(Tab.DASHBOARD);
     const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
     
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
+    const [admins, setAdmins] = useState<AdminUser[]>([]);
+    const [collaterals, setCollaterals] = useState<CollateralItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchLogs = async () => {
@@ -43,9 +47,33 @@ const App: React.FC = () => {
         }
     };
 
+    const fetchAdmins = async () => {
+        try {
+            const adminsCollection = collection(db, 'admins');
+            const q = query(adminsCollection, orderBy('username', 'asc'));
+            const querySnapshot = await getDocs(q);
+            const fetchedAdmins = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AdminUser[];
+            setAdmins(fetchedAdmins);
+        } catch (error) {
+            console.error("Error fetching admins: ", error);
+        }
+    };
+
+    const fetchCollaterals = async () => {
+        try {
+            const collateralsCollection = collection(db, 'collaterals');
+            const q = query(collateralsCollection, orderBy('name', 'asc'));
+            const querySnapshot = await getDocs(q);
+            const fetchedCollaterals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CollateralItem[];
+            setCollaterals(fetchedCollaterals);
+        } catch (error) {
+            console.error("Error fetching collaterals: ", error);
+        }
+    };
+
     const fetchData = async () => {
         setLoading(true);
-        await Promise.all([fetchLogs(), fetchEquipment()]);
+        await Promise.all([fetchLogs(), fetchEquipment(), fetchAdmins(), fetchCollaterals()]);
         setLoading(false);
     };
 
@@ -60,6 +88,7 @@ const App: React.FC = () => {
 
     const handleLogout = () => {
         setIsAdminLoggedIn(false);
+        setActiveTab(Tab.DASHBOARD);
     };
     
     return (
@@ -68,9 +97,12 @@ const App: React.FC = () => {
                 <h1 className="text-4xl font-semibold m-0">Marketing Equipment Hub</h1>
             </header>
 
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} isAdminLoggedIn={isAdminLoggedIn}/>
 
             <main className="tab-content">
+                <div className={`tab-pane ${activeTab === Tab.DASHBOARD ? 'block' : 'hidden'}`}>
+                    <DashboardView logs={logs} equipment={equipment} />
+                </div>
                 <div className={`tab-pane ${activeTab === Tab.LOGBOOK ? 'block' : 'hidden'}`}>
                     <LogbookView
                         isAdminLoggedIn={isAdminLoggedIn}
@@ -86,6 +118,19 @@ const App: React.FC = () => {
                         isAdminLoggedIn={isAdminLoggedIn}
                         equipment={equipment}
                         fetchEquipment={fetchData}
+                    />
+                </div>
+                <div className={`tab-pane ${activeTab === Tab.COLLATERALS ? 'block' : 'hidden'}`}>
+                    <CollateralsView
+                        isAdminLoggedIn={isAdminLoggedIn}
+                        collaterals={collaterals}
+                        fetchCollaterals={fetchData}
+                    />
+                </div>
+                <div className={`tab-pane ${activeTab === Tab.ADMIN_SETTINGS ? 'block' : 'hidden'}`}>
+                    <AdminSettingsView 
+                        admins={admins}
+                        fetchAdmins={fetchData}
                     />
                 </div>
             </main>

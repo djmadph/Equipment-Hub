@@ -55,14 +55,19 @@ const LogbookView: React.FC<LogbookViewProps> = ({ isAdminLoggedIn, logs, equipm
         }
     };
 
-    // FIX: Use `instanceof Timestamp` as a type guard to safely call `.toDate()`
-    const filteredLogs = logs.filter(entry =>
-        Object.values(entry).some(value =>
-            String(value instanceof Timestamp ? value.toDate().toLocaleDateString('en-US') : value)
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase())
-        )
-    );
+    // FIX: Refactored filtering logic to be type-safe by checking specific properties instead of using Object.values.
+    const filteredLogs = logs.filter(entry => {
+        const searchTermLower = searchTerm.toLowerCase();
+        return (
+            String(entry.requestor).toLowerCase().includes(searchTermLower) ||
+            String(entry.item).toLowerCase().includes(searchTermLower) ||
+            String(entry.purpose).toLowerCase().includes(searchTermLower) ||
+            String(entry.status).toLowerCase().includes(searchTermLower) ||
+            String(entry.clearedBy).toLowerCase().includes(searchTermLower) ||
+            (entry.borrowDate instanceof Timestamp && entry.borrowDate.toDate().toLocaleDateString('en-US').toLowerCase().includes(searchTermLower)) ||
+            (entry.returnDate instanceof Timestamp && entry.returnDate.toDate().toLocaleDateString('en-US').toLowerCase().includes(searchTermLower))
+        );
+    });
 
     return (
         <div>

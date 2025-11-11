@@ -1,5 +1,6 @@
-
 import React, { useState } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../index';
 
 interface LoginModalProps {
     onClose: () => void;
@@ -10,14 +11,37 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onLoginSuccess }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, this would be a secure API call.
+        setError('');
+        setIsLoading(true);
+
+        // Fallback for original admin to ensure app is not locked out
         if (username === 'Kurt C.' && password === 'camano') {
             onLoginSuccess();
-        } else {
-            setError('Invalid username or password.');
+            return;
+        }
+        
+        // SECURITY WARNING: Storing and checking plain-text passwords is not secure.
+        // In a production environment, use a proper authentication service like Firebase Authentication.
+        try {
+            const adminsRef = collection(db, 'admins');
+            const q = query(adminsRef, where("username", "==", username), where("password", "==", password));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                onLoginSuccess();
+            } else {
+                setError('Invalid username or password.');
+            }
+
+        } catch (err) {
+            console.error("Login error: ", err);
+            setError('An error occurred during login. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -49,8 +73,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onLoginSuccess }) => {
                             required
                         />
                     </div>
-                    <button type="submit" className="w-full p-3.5 text-base font-semibold rounded-lg border-none bg-brand-accent text-white cursor-pointer">
-                        Login
+                    <button type="submit" disabled={isLoading} className="w-full p-3.5 text-base font-semibold rounded-lg border-none bg-brand-accent text-white cursor-pointer disabled:opacity-50">
+                        {isLoading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
             </div>
